@@ -1,0 +1,21 @@
+# Build intermediates
+build/classes/
+build/dex/
+build/helper-classes.jar
+
+# Heavy official SDK / build tools (downloaded on demand for developers)
+build/android.jar
+vendor/r8.jar
+
+# Sensitive runtime state (never commit tokens)
+state/
+*.log
+
+# System & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.bak
+node_modules/

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#11131b"><title>DSHA 副屏</title><link rel="stylesheet" href="/viewer.css"><script src="/video.js" defer></script><script src="/viewer.js" defer></script></head>
+<body><main>
+<header><div><span class="eyebrow">DSHA · 手机本地</span><h1>副屏</h1></div><button id="return" class="quiet">返回 DSHA ↗</button></header>
+<section class="panel"><div class="state"><span id="dot"></span><strong id="mode">正在连接…</strong><span id="size">720 × 1280</span></div><p id="hint">先查看画面，需要操作时再接管。</p><div class="actions"><button id="take" class="primary" disabled>手动接管</button><button id="release" disabled>交还机器人</button><button id="refresh" disabled>刷新</button></div></section>
+<div class="orientation"><label for="orientation">副屏方向</label><select id="orientation" disabled><option value="auto">自动跟随应用</option><option value="landscape">横屏</option><option value="portrait">竖屏</option></select><span>手动接管后可切换</span></div>
+<p id="notice" role="status" aria-live="polite"></p>
+<div class="view-options"><button id="zoom" class="quiet">放大画面</button><button id="video-mode" class="quiet">切换为截图</button></div>
+<section class="screen-wrap" id="screen-wrap"><div id="screen"><img id="frame" alt="虚拟副屏画面" draggable="false"><canvas id="video" width="720" height="1280" aria-label="虚拟副屏实时画面"></canvas><div id="empty">等待副屏画面</div></div><div class="caption"><span id="fresh">尚无画面</span><span id="frame-size">等待画面</span></div></section>
+<section class="panel controls"><div class="actions"><button id="back" disabled>← 返回</button><button id="enter" disabled>回车 ↵</button><button id="stop" class="danger" disabled>关闭副屏</button></div><label for="text">输入文字</label><textarea id="text" maxlength="2000" rows="2" placeholder="先点击副屏里的输入框，再在这里写字" disabled></textarea><div class="input-actions"><label class="check"><input type="checkbox" id="clear">替换原有文字</label><button id="paste" disabled>粘贴到副屏</button></div><p class="small">粘贴会覆盖手机剪贴板，不会自动提交。</p></section>
+<footer>离开预览页会保留手动接管状态。交还后回到 DSHA 说“继续”。<br>流畅预览在本机运行，切到后台自动暂停视频。</footer>
+</main></body></html>
