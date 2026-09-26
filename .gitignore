@@ -2,6 +2,12 @@
 build/classes/
 build/dex/
 build/helper-classes.jar
+build/release-*/
+build/test-*/
+virtual-display.setup.json
+**/virtual-display.setup.json
+vendor/platform.zip
+vendor/android-35/
 
 # Heavy official SDK / build tools (downloaded on demand for developers)
 build/android.jar

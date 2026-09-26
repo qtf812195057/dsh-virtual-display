@@ -32,7 +32,8 @@ import java.util.concurrent.*;
 
 /** Phone-local, token-authenticated, virtual-display-only controller. No shell endpoint. */
 public final class PhoneDisplay {
- static final int WIDTH=720,HEIGHT=1280,DPI=240,PORT=3096;
+ static final int WIDTH=720,HEIGHT=1280,DPI=240,PORT=port();
+ static int port(){String v=System.getenv("VDISPLAY_PORT");int p=v==null?3096:Integer.parseInt(v);if(p<1024||p>65535)throw new IllegalArgumentException("Invalid local port");return p;}
  static final Object FRAME_LOCK=new Object();
  static final Object STATE_LOCK=new Object();
  static VideoCapture video;
@@ -70,7 +71,7 @@ public final class PhoneDisplay {
   server.start();System.out.println("DSH_VDISPLAY_READY 127.0.0.1:"+PORT);Looper.loop();
  }
  static Object service(String name)throws Exception{return Class.forName(WRAPPERS+"ServiceManager").getMethod("get"+name).invoke(null);}
- static JSONObject status()throws Exception{syncDisplay();return new JSONObject().put("ok",true).put("version","0.5.0").put("manualPaused",manualPaused).put("active",display!=null).put("displayId",display==null?-1:display.getDisplay().getDisplayId()).put("width",width).put("height",height).put("rotation",rotation).put("revision",revision).put("orientation",orientation).put("displayError",displayError).put("app",app).put("frameCount",video==null?0:video.sourceFrames).put("frameAgeMs",video==null?-1:SystemClock.elapsedRealtime()-video.lastSourceMs).put("phoneLocal",true).put("idleTimeoutSeconds",900).put("serverTimeUs",System.nanoTime()/1000).put("video",video==null?JSONObject.NULL:video.status());}
+ static JSONObject status()throws Exception{syncDisplay();return new JSONObject().put("ok",true).put("version","0.5.1").put("manualPaused",manualPaused).put("active",display!=null).put("displayId",display==null?-1:display.getDisplay().getDisplayId()).put("width",width).put("height",height).put("rotation",rotation).put("revision",revision).put("orientation",orientation).put("displayError",displayError).put("app",app).put("frameCount",video==null?0:video.sourceFrames).put("frameAgeMs",video==null?-1:SystemClock.elapsedRealtime()-video.lastSourceMs).put("phoneLocal",true).put("idleTimeoutSeconds",900).put("serverTimeUs",System.nanoTime()/1000).put("video",video==null?JSONObject.NULL:video.status());}
  static String secret(){byte[] bytes=new byte[32];random.nextBytes(bytes);return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);}
  static void setManual(boolean paused,String owner)throws Exception{
   if(paused)Files.write(Paths.get(dataDir,"manual-paused"),new byte[]{1});else Files.deleteIfExists(Paths.get(dataDir,"manual-paused"));

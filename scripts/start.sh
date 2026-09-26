@@ -1,24 +1,35 @@
-#!/bin/sh
-# DSHA 虚拟副屏后台常驻服务启动脚本
-# 适用平台：Android 12 ~ Android 16 (支持免特权 Shell UID 2000 及 Root UID 0)
-
-BASE=/data/local/tmp/dsh-phone-vdisplay
-
-# 1. 结束已有旧实例
-pkill -f '[l]ocal.dsh.vdisplay.PhoneDisplay' 2>/dev/null || true
-sleep 0.5
-
-# 2. 确保 token 凭据存在
-if [ ! -f "$BASE/token" ]; then
-    if [ -f /dev/urandom ]; then
-        head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=' | head -c 43 > "$BASE/token"
-    else
-        echo "LyHEk15xrv9DfO6YF4ng5qrsbg27JBZN7SHszTlh6Po" > "$BASE/token"
-    fi
-    chmod 600 "$BASE/token" 2>/dev/null || true
+#!/system/bin/sh
+set -eu
+export PATH=/system/bin:/system/xbin
+unset LD_PRELOAD
+BASE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+case "$(id -u)" in 0|2000) ;; *) echo 'Use an authorized Android shell (Shizuku/local ADB/root).' >&2; exit 1;; esac
+[ -x /system/bin/app_process ] || { echo 'Run this in Android shell, not the DSHA Linux terminal.' >&2; exit 1; }
+[ ! -d "$BASE/install.lock" ] || { echo 'Installation in progress; retry later.' >&2; exit 1; }
+for file in helper.jar scrcpy.jar token viewer.html viewer.js viewer.css video.js; do
+ [ -s "$BASE/$file" ] || { echo "Missing runtime file: $file" >&2; exit 1; }
+done
+export CLASSPATH="$BASE/scrcpy.jar:$BASE/helper.jar"
+control() { app_process / local.dsh.vdisplay.HelperControl "$BASE" status; }
+if control; then echo 'Helper is already running; current session preserved.'; exit 0; else result=$?; fi
+[ "$result" -eq 2 ] || { echo 'Existing service rejected the health check; no replacement started.' >&2; exit 1; }
+if ! mkdir "$BASE/start.lock" 2>/dev/null; then
+ old=$(cat "$BASE/start.lock/pid" 2>/dev/null || true)
+ case "$old" in ''|*[!0-9]*) echo 'Startup lock incomplete; retry or inspect the stale lock.' >&2; exit 1;; esac
+ if kill -0 "$old" 2>/dev/null; then echo 'Another startup is in progress.' >&2; exit 1; fi
+ rm -f "$BASE/start.lock/pid"
+ rmdir "$BASE/start.lock"
+ mkdir "$BASE/start.lock"
 fi
-
-# 3. 使用 setsid 独立运行 app_process，防止调用终端关闭时被系统连带杀掉
-setsid sh -c "CLASSPATH=$BASE/scrcpy.jar:$BASE/helper.jar app_process / local.dsh.vdisplay.PhoneDisplay $BASE/token" > "$BASE/service.log" 2>&1 </dev/null &
-
-echo "DSHA Virtual Display Helper started. PID: $!"
+echo $$ > "$BASE/start.lock/pid"
+trap 'rm -f "$BASE/start.lock/pid"; rmdir "$BASE/start.lock"' EXIT
+if control >/dev/null 2>&1; then echo 'Helper is already running.'; exit 0; else result=$?; fi
+[ "$result" -eq 2 ] || exit 1
+umask 077
+setsid app_process / local.dsh.vdisplay.PhoneDisplay "$BASE/token" > "$BASE/service.log" 2>&1 </dev/null &
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+ sleep 1
+ if control; then echo 'Phone-local Helper ready.'; exit 0; fi
+done
+echo "Helper did not become ready. Inspect $BASE/service.log locally." >&2
+exit 1

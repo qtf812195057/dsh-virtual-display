@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory=$true)][string]$JarPath,
-  [string]$Needle = '0.5.0',
+  [string]$Needle = '0.5.1',
   [string]$OldNeedle = '0.4.0'
 )
 $ErrorActionPreference = 'Stop'
@@ -102,3 +102,5 @@ Write-Output "STRINGS  : semver-like = $(if ($semvers.Count) { $semvers -join ',
 
 $verdict = ($names.Count -eq 1 -and $names[0] -eq 'classes.dex' -and $storedAdler -eq $calcAdler -and $storedSig -eq $calcSig -and $fileSizeField -eq $dex.Length -and $ok -and $newHits.Count -ge 1 -and $oldHits.Count -eq 0)
 Write-Output "VERDICT  : $(if ($verdict) { 'PASS' } else { 'FAIL' })"
+
+if (-not $verdict) { throw 'Helper JAR verification failed' }

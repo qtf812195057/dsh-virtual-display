@@ -1,170 +1,147 @@
-# DSHA 手机虚拟副屏插件 (Phone Virtual Display)
+# DSHA 手机虚拟副屏 0.5.1
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Android%2012%2B-green.svg)](https://developer.android.com)
-[![DSHA](https://img.shields.io/badge/DSHA-0.1.5%2B-orange.svg)](https://github.com/deepseek-ai)
+在 Android 手机上创建独立虚拟显示屏，让 DSHA 在副屏打开应用、截图和操作，同时保留主屏供用户使用。提供浏览器预览、H.264 视频和手动接管。
 
-为手机端 **DSHA (DeepSeek for Android)** 打造的**独立虚拟副屏自动化与多任务运行插件**。
+**0.5.1 为手机本地独立版：安装、启动和日常使用都可以在手机完成，不需要电脑服务、远程网关、FRP 或其他项目目录。** 插件只连接本机 `127.0.0.1:3096`；Helper 退出时提示用户自行恢复，不会请求任何电脑，也不会自动重试操作。
 
-让手机端的 AI Agent 能够在后台独立创建并控制一块**看不见、不遮挡主屏**的虚拟屏幕（默认竖屏 720×1280、横屏 1280×720），在副屏中静默打开并操作任意第三方 App，实现“用户在前台使用主屏聊微信，AI 在后台副屏替用户操作设置或应用”的真正真机多任务体验！
+“独立”不代表普通插件能够自行获得 Android 系统权限。用户仍需自行准备 **Shizuku 授权的 Android 终端、手机本地 ADB shell，或 root shell**。这些工具的安装、授权、无线调试配对和重启后恢复由用户负责，本项目不自动配置它们。
 
----
+## 下载
 
-## 🌟 核心特性
+- **完整手机安装包：[dsh-vdisplay-phone-0.5.1.zip](dist/dsh-vdisplay-phone-0.5.1.zip)**。包含预编译 Helper、scrcpy 运行库、网页、手机安装/启动脚本和 DSHA 插件包。
+- [单独的 DSHA 插件包](dist/dsh-virtual-display-0.5.1.tgz)：仅适合已经部署好 Helper 的用户。只导入这个包不会安装或启动 Helper。
+- [SHA256 校验值](dist/SHA256SUMS)。安装脚本也会校验完整包里的运行文件。
 
-- 📱 **主副屏完全独立**：
-  副屏上运行的应用拥有完全独立的显示层与输入焦点，不会抢占主屏前台焦点，不会遮挡用户视线。
-- 🔓 **完美支持免 Root (Non-Root)**：
-  经实测兼容 **Android 12 ~ Android 16**（覆盖 MIUI 13、RedMagic OS、AOSP、ColorOS 等多品牌定制系统）。在非 Root 设备上仅需通过 **ADB** 或 **Shizuku** 即可平稳运行；已 Root 设备亦可无缝兼容。
-- 🌐 **Web 实时流式预览与手动接管**：
-  内置原生 WebCodecs H.264 视频流（30 FPS），用户只需在手机浏览器中打开一次性安全链接，即可在主屏悬浮/分屏监视副屏画面，并可一键“手动接管”副屏触控输入，完成验证码或敏感密码输入后再交还 AI。
-- 🤖 **原生 AI 工具集集成 (`vd_*`)**：
-  向 DSHA 注册 10 项核心工具：`vd_start`（打开应用）、`vd_screenshot`（副屏识图）、`vd_tap` / `vd_swipe`（触控操作）、`vd_type` / `vd_key`（输入文字/按键）、`vd_preview`（预览接管）、`vd_stop`（安全退出）等。
-- 🛡️ **安全隔离与本地优先**：
-  默认所有通信局限在手机本地回环网络（`127.0.0.1:3096`），全程受 256 位安全 Token 鉴权保护，无需外网服务器，无数据泄露风险。
+GitHub 手机上打开文件后选择下载原文件。ZIP 解压后目录应为 `dsh-vdisplay-0.5.1`，其中直接包含 `install-phone.sh`、`helper.jar` 等文件。
 
----
+## 适用范围
 
-## 📁 干净的文件目录结构 (Repository Structure)
+- 需要支持 `@deepseek-ai/dsh-tools ^0.1.5-rc.2` 的手机 DSHA，以及其终端内可用的 Node.js。
+- 主要实测环境：红魔 NX789J / Android 16。代码含旧 Android 显示标志兼容分支，但不能据此保证 Android 12–16 的所有品牌、ROM 或应用都支持。
+- 首次启动权限通道需要用户操作。Shizuku 官方提供 Android 11 及以上通过无线调试在手机自行启动的方法；非 root 方式在手机重启后需要重新启动 Shizuku。参见[官方启动说明](https://shizuku.rikka.app/guide/setup/)。
+- 部分应用不支持副屏；单实例应用可能被系统从主屏移到副屏。输入或显示创建被 ROM 拒绝时请停止，不要自动改用主屏。
+- 本地副屏通信不需要互联网；DSHA 的模型服务是否需要联网，取决于用户自己的模型配置。
 
-本项目已精简移除了所有开发过程中的临时脚本与私人凭据，保留纯粹标准的开源项目结构：
+## 完全在手机安装
+
+### 1. 准备有权限的 Android 终端
+
+自行选择一种方式：
+
+- Shizuku：按其官方文档开启开发者选项、无线调试并完成配对、启动，再授权支持 Shizuku 的终端。使用 rish 的用户参见[官方 rish 说明](https://github.com/RikkaApps/Shizuku-API/blob/master/rish/README.md)。只安装 Shizuku 而未启动、未授权终端是不够的。
+- 手机本地 ADB：自行使用支持本机无线调试配对的工具，进入本机 Android shell。
+- root：在自己信任的终端进入 root shell。
+
+在该终端执行 `id`，应有 Android shell UID **2000** 或 root UID **0**，并能访问 `/system/bin/app_process`。**DSHA 内的 Linux 终端即使显示 root，也不等于 Android root shell。** 不要在普通 DSHA 终端执行安装和启动脚本。
+
+### 2. 解压完整包
+
+用手机文件管理器将 ZIP 解压到：
 
 ```text
-dsh-virtual-display/
-├── dist/                          # 📦 预打包发布文件（开箱即用）
-│   └── dsh-virtual-display-0.5.0.tgz  # DSHA 离线插件包（直接导入 DSHA）
-├── phone-plugin/                  # 🔌 DSHA 插件源码（Node.js / Cordis）
-│   ├── package.json               # 插件元信息与依赖说明
-│   ├── cordis.patch.yml           # DSH 插件注册补丁
-│   └── lib/
-│       ├── index.js               # 插件入口，定义与注册 vd_* 工具集
-│       └── client.js              # 与手机本地 3096 守护进程通信的 HTTP 客户端
-├── src/                           # ☕ 手机端 Helper 守护进程源码（Java）
-│   ├── PhoneDisplay.java          # 核心控制器（内含 Android 12 ~ 16 自动兼容 flags）
-│   └── VideoCapture.java          # MediaCodec 硬件视频流录制与 EGL Surface 绑定
-├── ui/                            # 🖥️ Web 预览前端（零依赖原生 HTML5 / WebCodecs）
-│   ├── viewer.html                # 预览页面
-│   ├── viewer.js                  # 画面渲染与触摸输入事件反向转发
-│   ├── viewer.css                 # 响应式布局样式
-│   └── video.js                   # WebCodecs 视频流解码器
-├── vendor/                        # 📚 第三方底层运行库与编译依赖
-│   ├── scrcpy.jar                 # Genymobile scrcpy-server v4.1（Android 系统服务适配层）
-│   ├── r8.jar                     # Google D8 编译器（编译 class -> dex）
-│   └── Workarounds.java           # Android 底层反射兼容工作区
-├── build/                         # 🔨 编译产物目录
-│   ├── dsh-vdisplay.jar           # 预编译好的 Helper 核心 Dex 包（内置，直接可跑）
-│   └── android.jar                # Android SDK API 桩文件（供二次编译使用）
-├── scripts/                       # 🛠️ 自动化运维与激活脚本
-│   ├── activate.cmd               # Windows 电脑端一键 ADB 部署与激活脚本
-│   ├── activate.sh                # Linux / macOS 电脑端一键 ADB 部署与激活脚本
-│   ├── start.sh                   # 手机端常驻服务启动脚本（供 ADB / Shizuku 执行）
-│   ├── build-local.ps1            # Windows 本地二次编译打包脚本（Java -> Dex -> Jar）
-│   ├── build.sh                   # Linux / Docker 环境编译脚本
-│   └── verify-helper-jar.ps1      # Jar 包 DEX 合规性校验脚本
-├── .gitignore                     # Git 忽略配置（已忽略临时 state 和 log）
-├── LICENSE                        # 开源协议 (Apache-2.0)
-└── THIRD-PARTY-LICENSE.txt        # 第三方组件许可证声明
+/sdcard/Download/dsh-vdisplay-0.5.1/
 ```
 
----
+如果手机的共享存储映射不同，以下所有命令均使用实际路径。不要解压到只有某个应用自己可访问的私有目录。
 
-## 🚀 安装与使用指南
+### 3. 在 DSHA 终端生成配置并导入插件
 
-### 第一步：手机端安装 DSHA 插件
+```sh
+node /sdcard/Download/dsh-vdisplay-0.5.1/configure.mjs
+dsha-plugin import /sdcard/Download/dsh-vdisplay-0.5.1/dsh-virtual-display-0.5.1.tgz
+```
 
-1. 将 `dist/dsh-virtual-display-0.5.0.tgz` 拷贝到手机存储（例如 `/sdcard/Download/` 目录）；
-2. 打开手机上的 **DSHA** 应用；
-3. 进入 DSHA 内置的简易终端（Terminal），依次执行以下命令：
-   ```bash
-   # 1. 导入虚拟副屏插件
-   dsha-plugin import /sdcard/Download/dsh-virtual-display-0.5.0.tgz
+也可通过 DSHA 的插件管理界面导入 `.tgz`，但仍须运行配置脚本。
 
-   # 2. 配置通信 Token（创建配置目录并写入 token）
-   mkdir -p /root/.dsh
-   cat > /root/.dsh/virtual-display.json <<'EOF'
-   {"token":"LyHEk15xrv9DfO6YF4ng5qrsbg27JBZN7SHszTlh6Po"}
-   EOF
-   ```
-4. 在 DSHA 主界面点击重启，或查看启动日志出现 `插件加载完成: @local/dsh-virtual-display` 即代表插件就绪。
+`configure.mjs` 在 `$DSH_HOME/virtual-display.json`（默认 `~/.dsh/virtual-display.json`）生成每位用户独有的随机凭据。已有合法配置会复用，不会重置。没有共享默认密码，也不会打印凭据。
 
----
+脚本在解压目录生成临时 `virtual-display.setup.json`，供下一步传递配置。这个文件在共享存储中，安装后会删除；请尽快完成下一步，不要分享或上传它。安装失败时，可删除此临时文件后重新运行配置脚本再试。
 
-### 第二步：激活手机副屏服务（支持三种途径）
+### 4. 在有权限的 Android 终端安装并启动
 
-副屏后台服务需以系统特权（`Shell UID 2000` 或 `Root UID 0`）运行，我们提供了三种最简方案：
+```sh
+sh /sdcard/Download/dsh-vdisplay-0.5.1/install-phone.sh
+```
 
-#### 方案 A：使用电脑一键自动激活（推荐，最省心）
-1. 手机开启「开发者选项」中的 **「USB 调试」**（或「无线调试」）；
-2. 手机使用数据线连接电脑（或者与电脑连接同一 Wi-Fi 后执行 `adb connect <手机IP>:<端口>`）；
-3. 直接在本项目根目录运行激活脚本：
-   - **Windows**：双击运行 `scripts\activate.cmd`
-   - **macOS / Linux**：终端运行 `./scripts/activate.sh`
-4. 脚本会自动将核心组件推送到手机 `/data/local/tmp/dsh-phone-vdisplay/` 并在后台独立启动常驻服务。
+脚本校验文件、将组件安装到 `/data/local/tmp/dsh-phone-vdisplay/`，保存私有凭据，删除临时配置，然后启动 Helper。成功输出 `Phone-local Helper ready.`。
 
-#### 方案 B：纯手机脱机激活（免电脑，使用 Shizuku）
-如果你在户外没有电脑，可以通过 [Shizuku](https://shizuku.rikka.app/) 在手机本地激活：
-1. 手机安装并启动 Shizuku（已授权无线调试）；
-2. 使用任何支持 Shizuku 调用的终端应用（如 Termux 配套 `shizuku-exec`，或 Shizuku Runner），直接执行：
-   ```bash
+启动脚本不会杀掉已有服务，不会清除手动接管状态，也不会替换正在运行的 Helper。已有凭据不同或本机端口被占用时会明确失败。
+
+### 5. 在 DSHA 使用
+
+按 DSHA 自身流程重新加载插件或重启其核心，新建会话后说：
+
+> 用虚拟副屏打开设置，查看信息，完成后关闭副屏。
+
+十个工具：`vd_status`、`vd_start`、`vd_orientation`、`vd_screenshot`、`vd_tap`、`vd_swipe`、`vd_type`、`vd_key`、`vd_preview`、`vd_stop`。
+
+截图带实际尺寸及画面 revision；横竖屏变化后重新截图定位。默认竖屏 720×1280、横屏 1280×720。`vd_type` 会使用手机共享剪贴板。
+
+## 副屏失效后怎样恢复
+
+### 只是调用了 vd_stop
+
+这会关闭虚拟屏及其中页面，Helper 仍在后台。下次直接 `vd_start`，无需重新安装。15 分钟无操作也会释放虚拟屏。
+
+### 手机重启、清理后台或 Helper 退出
+
+1. 自行恢复权限通道：例如重新启动 Shizuku、确认终端授权；无线调试是否需要重新开启/配对，按设备状态处理。
+2. 在有权限的 Android 终端执行：
+
+   ```sh
    sh /data/local/tmp/dsh-phone-vdisplay/start.sh
    ```
-3. 即可在手机本地直接拉起后台副屏服务，不需要连接电脑！
 
-#### 方案 C：Root 手机开机自启
-如果手机已 Root（Magisk / KernelSU / APatch）：
-只需将启动命令放入 Magisk 自启目录：
-```bash
-su -c "echo 'sh /data/local/tmp/dsh-phone-vdisplay/start.sh' > /data/adb/service.d/vdisplay.sh && chmod +x /data/adb/service.d/vdisplay.sh"
-```
-手机每次开机，副屏服务便会自动在后台静默就绪！
+3. 回到 DSHA 查询 `vd_status`，确认正常后再开始任务。
 
----
+日常重新拉起无需运行 `configure.mjs`、无需重新生成 token。若系统连运行文件也删除了，重新按完整安装流程部署。文件还在但启动失败时，用户可以在 Android shell 本地查看 `service.log`；日志可能含应用状态，分享前自行检查。
 
-### 第三步：日常使用与对话测试
+本项目不提供开机自启或保证后台永久存活，也不自动设置系统权限、电池策略或 root 模块。用户可按自己的手机环境解决保活，Shizuku/无线调试失效的处理参见对应工具官方说明。
 
-打开手机 DSHA，直接在对话框中用自然语言对 DeepSeek 发送指令即可：
+### 手动接管或凭据不匹配
 
-- **打开应用并在副屏操作**：
-  > “用虚拟副屏打开设置，帮我看看电池还剩多少电。”  
-  > “在副屏打开应用商店，搜索微信。”
-- **查看与手动接管画面**：
-  > “打开副屏预览，我要查看画面。”  
-  DSHA 会调用 `vd_preview`，并在手机浏览器中自动打开本地预览页面。你可以一边看着实时画面，一边点击「手动接管」亲自在副屏上打字或滑动，交还控制后 AI 会继续后续流程。
-- **关闭副屏**：
-  > “关闭虚拟副屏。”
+- `MANUAL_CONTROL`：在副屏预览页明确“交还机器人”。不要通过重启、删除标记或换主屏绕过接管。
+- 凭据不匹配：保留原配置并恢复匹配关系，不要反复生成新 token。原配置已丢失时，需要用户先结束任务，再自行清理旧安装并重新配对安装。
+- 端口占用或启动锁异常：先确认是否已有 Helper 正在启动/运行。启动脚本不会强制杀进程；确认为异常残留时由用户自行处理，或重启手机后重试。
 
----
+## 预览和接管
 
-## 🛠️ 二次开发与源码编译
+告诉 DSHA“打开副屏预览”，它会在手机主屏浏览器打开本机一次性链接。视频目标 30fps，实际速度取决于设备、编码器和浏览器；失败时可切换 JPEG 截图。
 
-本项目已内置经过验证的预编译 `dsh-vdisplay.jar`，一般用户无需自己编译。如果开发者修改了 `src/` 中的 Java 代码，可以通过以下方式快速重新构建：
+点击“手动接管”后，机器人操作由服务端拒绝。关掉浏览器不会自动交还；需要明确点“交还机器人”。预览链接 5 分钟内一次有效，不是永久书签。截图工具一次只返回一张图，不能当成模型连续观看视频。
 
-### Windows 环境编译：
-需安装 JDK 17 或更新版本，在项目根目录运行：
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\build-local.ps1
-```
-脚本会自动调用 JDK 的 `javac`、Google `r8.jar`（D8 编译器），一键生成 DEX 并打成合规的 `build/dsh-vdisplay.jar`。
+## 从 0.5.0 升级
 
-### Linux / Docker 环境编译：
-```bash
-sh scripts/build.sh
+1. 保存副屏里的工作、交还控制并关闭副屏。
+2. 在 DSHA 使用本版 `configure.mjs` 导出已有凭据，并导入 0.5.1 插件。
+3. 手机重启使旧 Helper 退出；自行恢复 Shizuku/本地 ADB/root 通道后，执行本版 `install-phone.sh`。
+
+0.5.1 不会读取旧电脑恢复配置，不会请求旧网关。旧配置可由用户自行移除。本版不包含其他分支的 0.6.0 异步手势接口；不要把 0.6.0 功能说明当成本版 API。
+
+## 源码与开发
+
+```text
+phone-plugin/   DSHA 插件，运行时只请求手机回环地址
+src/            Android Helper 和本地健康检查入口
+ui/             预览网页
+scripts/        手机安装/启动/配置，以及开发者构建工具
+vendor/         随包提供的 scrcpy 运行库及其参考源码
+build/          预编译 Helper；其他编译中间文件不提交
+dist/           手机 ZIP、DSHA TGZ 和校验值
+tests/          客户端离线测试
 ```
 
----
+普通用户无需编译。开发者需要 Node.js 20+、npm 和 JDK 17+（`JAVA_HOME` 或 Java 工具在 PATH）。编译依赖仅从官方地址下载到本仓库：
 
-## ❓ 常见问题排查 (FAQ)
+```sh
+node scripts/download-build-tools.mjs
+node scripts/build.mjs
+node --test tests/*.test.mjs
+node scripts/package-release.mjs
+```
 
-### Q1: 提示 `SecurityException: createVirtualDisplay() requires android.permission.ADD_TRUSTED_DISPLAY`？
-**解答**：这是部分定制系统（如小米 MIUI 13）在 Android 12 上对独立屏幕 flags 的拦截。本项目最新版本已在 `PhoneDisplay.java` 中加入了版本动态自适应降级逻辑（在 Android 12 下自动使用兼容 flag `0x1cb`），已在 MIUI 13 实测彻底解决。
+这些是开发工具，不是用户手机使用时要部署的电脑服务。调试时可用 `VDISPLAY_PORT` 指定 Helper 本机测试端口；生产插件固定请求 3096。测试安装可使用 `VDISPLAY_DIR=/data/local/tmp/dsh-phone-vdisplay-test-名称`，不会改变正式安装目录。
 
-### Q2: 手机重启后副屏不工作了？
-**解答**：Android 系统在关机或重启时会重置 `/data/local/tmp` 中的临时运行进程。重启后只需再次连接电脑运行一次 `activate.cmd`，或在手机上通过 Shizuku 执行一次 `sh /data/local/tmp/dsh-phone-vdisplay/start.sh` 即可迅速复活。
+## 许可证
 
----
-
-## 📄 许可证与致谢
-
-- 本项目遵循 [Apache-2.0 License](LICENSE) 开源协议。
-- 虚拟显示驱动包装层参考并使用了 [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy) 的底层 Wrapper 架构与 Workarounds（遵循 Apache-2.0 许可证，详见 `THIRD-PARTY-LICENSE.txt`）。
-- 感谢 DeepSeek 团队为 Android 带来的强大端侧智能平台。
+[Apache-2.0](LICENSE)。运行库来自 [scrcpy v4.1](https://github.com/Genymobile/scrcpy/tree/v4.1)，其许可见 [THIRD-PARTY-LICENSE.txt](THIRD-PARTY-LICENSE.txt)。包内不包含任何用户凭据、设备身份或私人服务地址。
